@@ -1,0 +1,45 @@
+name: Change Meross Lamp Color
+
+on:
+  schedule:
+    - cron: '45 19 * * *' # 7:45 PM UTC for 6:45 AM AEDT
+    - cron: '0 23 * * *'  # 11:00 PM UTC for 10:00 AM AEDT
+
+jobs:
+  change-color:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Change color to green at 6:45 AM AEDT
+        if: startsWith(github.event.schedule, 'cron(45 19')
+        env:
+          MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
+          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+        run: |
+          source venv/bin/activate
+          python meross_lamp.py --set-colour green
+
+      - name: Change color to yellow at 10:00 AM AEDT
+        if: startsWith(github.event.schedule, 'cron(0 23')
+        env:
+          MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
+          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+        run: |
+          source venv/bin/activate
+          python meross_lamp.py --set-colour yellow
