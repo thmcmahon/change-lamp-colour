@@ -2,8 +2,9 @@ name: Change Meross Lamp Color
 
 on:
   schedule:
-    - cron: '45 19 * * *' # 7:45 PM UTC for 6:45 AM AEDT
-    - cron: '0 23 * * *'  # 11:00 PM UTC for 10:00 AM AEDT
+    - cron: '45 19 * * *'
+    - cron: '0 23 * * *'
+  workflow_dispatch:  # Add this line to enable manual triggering
 
 jobs:
   change-color:
