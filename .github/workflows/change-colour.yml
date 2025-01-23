@@ -2,22 +2,36 @@ name: Change Meross Lamp Color
 
 on:
   schedule:
-    - cron: '45 19 * * *'
-    - cron: '0 23 * * *'
-  workflow_dispatch:  # Add this line to enable manual triggering
+    - cron: "45 19 * * *" # Green at 6:45 AM AEDT
+    - cron: "0 23 * * *" # Yellow at 10:00 AM AEDT
+  workflow_dispatch:
+    inputs:
+      color:
+        description: "Choose lamp color"
+        required: true
+        type: choice
+        options:
+          - green
+          - yellow
 
 jobs:
   change-color:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug GitHub Event
+        run: |
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Scheduled Event: ${{ github.event.schedule }}"
+          echo "Manual Color Input: ${{ inputs.color }}"
+
       - name: Check out the repo
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Install dependencies
         run: |
@@ -25,8 +39,8 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Change color to green at 6:45 AM AEDT
-        if: startsWith(github.event.schedule, 'cron(45 19')
+      - name: Change color to green (Scheduled)
+        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '45 19')
         env:
           MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
           MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
@@ -35,8 +49,8 @@ jobs:
           source venv/bin/activate
           python meross_lamp.py --set-colour green
 
-      - name: Change color to yellow at 10:00 AM AEDT
-        if: startsWith(github.event.schedule, 'cron(0 23')
+      - name: Change color to yellow (Scheduled)
+        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23')
         env:
           MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
           MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
@@ -44,3 +58,19 @@ jobs:
         run: |
           source venv/bin/activate
           python meross_lamp.py --set-colour yellow
+
+      - name: Change color manually
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
+          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+        run: |
+          source venv/bin/activate
+          python meross_lamp.py --set-colour ${{ inputs.color }}
+
+      - name: Debug Workflow Completion
+        if: always()
+        run: |
+          echo "Workflow completed"
+          echo "Status: ${{ job.status }}"
