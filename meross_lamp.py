@@ -3,6 +3,7 @@ import os
 import logging
 import traceback
 import argparse
+import sys
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus
@@ -71,9 +72,32 @@ async def main(args):
         logger.error(f"Error: {e}")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Meross Lamp Control")
-    parser.add_argument('-l', '--list-devices', action='store_true', help="List all devices")
-    parser.add_argument('-s', '--set-colour', type=str, help="Set the color of a specific device")
+    parser = argparse.ArgumentParser(
+        description="Meross Lamp Control",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  python meross_lamp.py --list-devices\n"
+            "  python meross_lamp.py --set-colour green\n"
+        )
+    )
+    parser.add_argument(
+        '-l', '--list-devices', action='store_true',
+        help="List all devices"
+    )
+    parser.add_argument(
+        '-s', '--set-colour', type=str,
+        choices=list(COLORS.keys()),
+        help=(
+            "Set the color of a specific device.\n"
+            "Available colors: %(choices)s"
+        )
+    )
     args = parser.parse_args()
+
+    # If no flags provided, show help and exit
+    if not args.list_devices and args.set_colour is None:
+        parser.print_help()
+        sys.exit(0)
 
     asyncio.run(main(args))
