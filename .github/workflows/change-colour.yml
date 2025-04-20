@@ -2,8 +2,12 @@ name: Change Meross Lamp Color
 
 on:
   schedule:
-    - cron: "45 19 * * *" # Green at 6:45 AM AEDT
-    - cron: "0 23 * * *" # Yellow at 10:00 AM AEDT
+    # Green at 6:45 local time (handles AEDT & AEST)
+    - cron: "45 19 * * *" # 6:45 AEDT (UTC+11)
+    - cron: "45 20 * * *" # 6:45 AEST (UTC+10)
+    # Yellow at 10:00 local time (handles AEDT & AEST)
+    - cron: "0 23 * * *" # 10:00 AEDT (UTC+11)
+    - cron: "0 0 * * *" # 10:00 AEST (UTC+10)
   workflow_dispatch:
     inputs:
       color:
@@ -41,8 +45,8 @@ jobs:
           pip install setuptools wheel
           pip install -r requirements.txt
 
-      - name: Change color to green (Scheduled)
-        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '45 19')
+      - name: Change color to green (Scheduled local 6:45)
+        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '45 ')
         env:
           MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
           MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
@@ -51,8 +55,8 @@ jobs:
           source venv/bin/activate
           python meross_lamp.py --set-colour green
 
-      - name: Change color to yellow (Scheduled)
-        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23')
+      - name: Change color to yellow (Scheduled local 10:00)
+        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 ')
         env:
           MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
           MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
