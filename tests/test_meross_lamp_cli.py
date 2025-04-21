@@ -50,3 +50,32 @@ def test_set_colour_live():
     res = run_cli(['--set-colour', color])
     assert res.returncode == 0
     assert f'Set device color to {color}' in res.stdout
+
+@pytest.mark.skipif(
+    not all(os.environ.get(v) for v in ['MEROSS_EMAIL', 'MEROSS_PASSWORD', 'DEVICE_UUID']),
+    reason='MEROSS_EMAIL, MEROSS_PASSWORD, and DEVICE_UUID must be set'
+)
+def test_set_colour_with_uuid_override_live():
+    """Integration: --set-colour with explicit --uuid override."""
+    color = 'yellow'
+    uuid = os.environ['DEVICE_UUID']
+    # Should succeed when overriding with the same UUID
+    res = run_cli(['--set-colour', color, '--uuid', uuid])
+    assert res.returncode == 0
+    assert f'Set device color to {color}' in res.stdout
+
+@pytest.mark.skipif(
+    not all(os.environ.get(v) for v in ['MEROSS_EMAIL', 'MEROSS_PASSWORD']),
+    reason='MEROSS_EMAIL and MEROSS_PASSWORD must be set'
+)
+def test_set_colour_with_uuid_invalid_live():
+    """Integration: --set-colour with explicit invalid --uuid should log error."""
+    color = 'yellow'
+    invalid_uuid = '00000000-0000-0000-0000-000000000000'
+    res = run_cli(['--set-colour', color, '--uuid', invalid_uuid])
+    # CLI logs an error but exit code remains 0
+    assert res.returncode == 0
+    # Expect error message in stderr mentioning not found
+    # The error message may appear in stdout or stderr
+    combined = (res.stdout + res.stderr).lower()
+    assert 'not found' in combined and invalid_uuid.lower() in combined

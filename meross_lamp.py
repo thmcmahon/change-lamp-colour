@@ -46,13 +46,14 @@ async def list_devices(manager):
         print("-" * 20)
 
 
-async def set_device_color(manager, color):
-    # locate the device
+async def set_device_color(manager, color, device_uuid):
+    # locate the device by provided UUID
     devices = manager.find_devices()
-    dev = next((d for d in devices if d.uuid == DEVICE_UUID), None)
+    dev = next((d for d in devices if d.uuid == device_uuid), None)
     if not dev:
-        logger.error("Device not found.")
+        logger.error(f"Device with UUID {device_uuid} not found.")
         return
+    # refresh device state before inspecting or setting
     # refresh device state before inspecting or setting
     await dev.async_update()
     if dev.online_status == OnlineStatus.ONLINE:
@@ -80,7 +81,9 @@ async def main(args):
         if args.list_devices:
             await list_devices(manager)
         elif args.set_colour:
-            await set_device_color(manager, args.set_colour)
+            # allow override via CLI uuid, otherwise use env DEVICE_UUID
+            target_uuid = args.uuid if args.uuid else DEVICE_UUID
+            await set_device_color(manager, args.set_colour, target_uuid)
 
         manager.close()
         await http_client.async_logout()
@@ -112,6 +115,11 @@ if __name__ == "__main__":
         "-d", "--debug",
         action="store_true",
         help="Enable DEBUG logging output"
+    )
+    parser.add_argument(
+        "-u", "--uuid",
+        type=str,
+        help="Override device UUID (default: DEVICE_UUID env var)"
     )
     args = parser.parse_args()
 
