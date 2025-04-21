@@ -1,56 +1,82 @@
-name: Change Meross lamp colour schedule
+name: Change Meross Lamp Color
 
 on:
-  # Run hourly at minute 45 UTC; workflow_dispatch allows manual runs
   schedule:
-    - cron: '45 * * * *'
+    # Green at 6:45 local time (handles AEDT & AEST)
+    - cron: "45 19 * * *" # 6:45 AEDT (UTC+11)
+    - cron: "45 20 * * *" # 6:45 AEST (UTC+10)
+    # Yellow at 10:00 local time (handles AEDT & AEST)
+    - cron: "0 23 * * *" # 10:00 AEDT (UTC+11)
+    - cron: "0 0 * * *" # 10:00 AEST (UTC+10)
   workflow_dispatch:
     inputs:
-      time:
-        description: 'Override local time (HH:MM) for testing'
-        required: false
       color:
-        description: 'Override colour for manual run (green or yellow)'
-        required: false
+        description: "Choose lamp color"
+        required: true
         type: choice
         options:
           - green
           - yellow
 
 jobs:
-  change-lamp:
+  change-color:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Determine local time and set colour
-        shell: bash
-        env:
-          # Allow manual override of time or color for testing
-          TIME_OVERRIDE:  ${{ github.event.inputs.time }}
-          COLOR_OVERRIDE: ${{ github.event.inputs.color }}
-          MEROSS_EMAIL:    ${{ secrets.MEROSS_EMAIL }}
-          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
-          DEVICE_UUID:     ${{ secrets.DEVICE_UUID }}
+    steps:
+      - name: Debug GitHub Event
         run: |
-          # If a colour override is provided in a manual dispatch, use it directly
-          if [ -n "$COLOR_OVERRIDE" ]; then
-            COLOR="$COLOR_OVERRIDE"
-            echo "::notice::Manual override colour: $COLOR"
-          else
-            # Determine the time to use (manual override or actual local)
-            if [ -n "$TIME_OVERRIDE" ]; then
-              NOW="$TIME_OVERRIDE"
-            else
-              NOW=$(TZ=Australia/Sydney date +'%H:%M')
-            fi
-            echo "Local (Canberra) time is $NOW"
-            case "$NOW" in
-              "06:45") COLOR=green ;;    # morning: green
-              "10:45") COLOR=yellow ;;   # 4h later: yellow
-              *) echo "::notice::Not a target time—exiting."; exit 0 ;;
-            esac
-            echo "::notice::Selected scheduled colour: $COLOR"
-          fi
-          python meross_lamp.py --set-colour $COLOR
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Scheduled Event: ${{ github.event.schedule }}"
+          echo "Manual Color Input: ${{ inputs.color }}"
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install setuptools wheel
+          pip install -r requirements.txt
+
+      - name: Change color to green (Scheduled local 6:45)
+        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '45 ')
+        env:
+          MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
+          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+        run: |
+          source venv/bin/activate
+          python meross_lamp.py --set-colour green
+
+      - name: Change color to yellow (Scheduled local 10:00)
+        if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 ')
+        env:
+          MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
+          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+        run: |
+          source venv/bin/activate
+          python meross_lamp.py --set-colour yellow
+
+      - name: Change color manually
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          MEROSS_EMAIL: ${{ secrets.MEROSS_EMAIL }}
+          MEROSS_PASSWORD: ${{ secrets.MEROSS_PASSWORD }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+        run: |
+          source venv/bin/activate
+          python meross_lamp.py --set-colour ${{ inputs.color }}
+
+      - name: Debug Workflow Completion
+        if: always()
+        run: |
+          echo "Workflow completed"
+          echo "Status: ${{ job.status }}"
