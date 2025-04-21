@@ -9,10 +9,11 @@ from meross_iot.manager import MerossManager
 from meross_iot.model.enums import OnlineStatus
 
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more verbose logging
+    level=logging.WARNING,  # Default to WARNING level
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
 
 COLORS = {
     'green': (0, 255, 0),
@@ -25,14 +26,12 @@ DEVICE_UUID = os.environ.get("DEVICE_UUID", "default_uuid")
 async def list_devices(manager):
     await manager.async_device_discovery()
     all_devices = manager.find_devices()
-    logger.info("Found devices:")
+    print("\nDiscovered Devices:")
+    print("-" * 20)
     for device in all_devices:
-        logger.info(f"Name: {device.name}")
-        logger.info(f"  Type: {device.type}")
-        logger.info(f"  UUID: {device.uuid}")
-        logger.info(f"  Hardware: {device.hardware_version}")
-        logger.info(f"  Firmware: {device.firmware_version}")
-        logger.info("---")
+        print(f"Device: {device.name}")
+        print(f"UUID: {device.uuid}")
+        print("-" * 20)
 
 async def set_device_color(manager, color):
     await manager.async_device_discovery()
@@ -43,7 +42,7 @@ async def set_device_color(manager, color):
         color_rgb = COLORS.get(color)
         if color_rgb:
             await device.async_set_light_color(rgb=color_rgb)
-            logger.info(f"Set device color to {color}")
+            print(f"Set device color to {color}")
         else:
             logger.error(f"Color {color} not recognized. Available colors: {list(COLORS.keys())}")
     else:
@@ -93,7 +92,16 @@ if __name__ == '__main__':
             "Available colors: %(choices)s"
         )
     )
+    parser.add_argument(
+        '-d', '--debug', action='store_true',
+        help="Enable DEBUG logging output"
+    )
     args = parser.parse_args()
+
+    # Configure logging levels based on debug flag
+    log_level = logging.DEBUG if args.debug else logging.WARNING
+    logging.getLogger().setLevel(log_level)
+    logging.getLogger('meross_iot').setLevel(log_level)
 
     # If no flags provided, show help and exit
     if not args.list_devices and args.set_colour is None:
