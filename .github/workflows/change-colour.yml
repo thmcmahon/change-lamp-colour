@@ -3,10 +3,8 @@ name: Change Meross Lamp Color
 on:
   schedule:
     # Green at 6:45 local time (handles AEDT & AEST)
-    - cron: "45 19 * * *" # 6:45 AEDT (UTC+11)
     - cron: "45 20 * * *" # 6:45 AEST (UTC+10)
     # Yellow at 10:00 local time (handles AEDT & AEST)
-    - cron: "0 23 * * *" # 10:00 AEDT (UTC+11)
     - cron: "0 0 * * *" # 10:00 AEST (UTC+10)
   workflow_dispatch:
     inputs:
