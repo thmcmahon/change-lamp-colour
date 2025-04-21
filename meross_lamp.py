@@ -64,31 +64,52 @@ async def set_device_color(manager, color, device_uuid):
 
 
 async def main(args):
+    # Validate credentials early
+    email = os.environ.get("MEROSS_EMAIL")
+    password = os.environ.get("MEROSS_PASSWORD")
+    if not email or not password:
+        print("Error: MEROSS_EMAIL and MEROSS_PASSWORD environment variables must be set", file=sys.stderr)
+        return 1
+
+    http_client = None
+    manager = None
     try:
         # Authenticate
         http_client = await MerossHttpClient.async_from_user_password(
-            email=os.environ.get("MEROSS_EMAIL"),
-            password=os.environ.get("MEROSS_PASSWORD"),
+            email=email,
+            password=password,
             api_base_url="https://iotx-ap.meross.com"
         )
 
+        # Initialize manager and discover devices
         manager = MerossManager(http_client=http_client)
         await manager.async_init()
-
-        # one discovery for both commands
         await manager.async_device_discovery()
 
+        # Dispatch commands
         if args.list_devices:
             await list_devices(manager)
         elif args.set_colour:
-            # allow override via CLI uuid, otherwise use env DEVICE_UUID
             target_uuid = args.uuid if args.uuid else DEVICE_UUID
             await set_device_color(manager, args.set_colour, target_uuid)
 
-        manager.close()
-        await http_client.async_logout()
+        # Success
+        return 0
     except Exception as e:
         logger.error(f"Error: {e}")
+        return 1
+    finally:
+        # Cleanup manager and logout, ignoring any errors
+        if manager:
+            try:
+                manager.close()
+            except Exception:
+                pass
+        if http_client:
+            try:
+                await http_client.async_logout()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
@@ -133,4 +154,6 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(level)
     logging.getLogger("meross_iot").setLevel(level)
 
-    asyncio.run(main(args))
+    # Run main and exit with its return code
+    exit_code = asyncio.run(main(args))
+    sys.exit(exit_code)

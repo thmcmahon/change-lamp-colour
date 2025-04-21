@@ -79,3 +79,22 @@ def test_set_colour_with_uuid_invalid_live():
     # The error message may appear in stdout or stderr
     combined = (res.stdout + res.stderr).lower()
     assert 'not found' in combined and invalid_uuid.lower() in combined
+
+def test_missing_credentials_list_devices():
+    """
+    The script should exit 1 and print a helpful error if credentials are missing when listing devices.
+    """
+    # Run with empty env -> no MEROSS_EMAIL/PASSWORD
+    res = run_cli(['--list-devices'], env={})
+    assert res.returncode == 1
+    out = (res.stdout + res.stderr).lower()
+    assert 'meross_email' in out and 'meross_password' in out
+
+def test_missing_credentials_set_colour():
+    """
+    The script should exit 1 and print a helpful error if credentials are missing when setting colour.
+    """
+    res = run_cli(['--set-colour', 'green'], env={})
+    assert res.returncode == 1
+    out = (res.stdout + res.stderr).lower()
+    assert 'meross_email' in out and 'meross_password' in out
