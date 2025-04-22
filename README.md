@@ -39,14 +39,14 @@ This is a lightweight Python CLI to list and control a Meross smart lamp via the
 
 ## Scheduling
 
-This repository includes a GitHub Actions workflow (`.github/workflows/change-colour.yml`) that:
-- Runs hourly at minute 45 UTC.
-- Uses the Australia/Sydney timezone to gate exactly **06:45** (sets green) and **10:45** (sets yellow) local Canberra time.
-- Can be manually triggered via the **Run workflow** button, with optional inputs:
-  - `time`: override the local time for testing (format `HH:MM`).
-  - `color`: manually choose `green` or `yellow` in one step.
+This repository includes a GitHub Actions workflow at `.github/workflows/change-colour.yml`:
+- Scheduled runs in Canberra time (AEST/AEDT):
+  - 06:45 local → triggers at `45 20 * * *` UTC (sets **green**)
+  - 10:00 local → triggers at `0 0 * * *` UTC  (sets **yellow**)
+- Manual runs via **Run workflow** (workflow_dispatch) with a required `color` input:
+  - `color`: `green` or `yellow`
 
-To customize or inspect the schedule, see `.github/workflows/change-colour.yml`.
+See `.github/workflows/change-colour.yml` for full details.
 
 ## Testing
 
